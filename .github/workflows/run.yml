@@ -1,41 +1,38 @@
-name: 刷步数
+name: 刷步數
 
 on:
-  schedule:
-    - cron: '0 0,2,4,6,8,14 * * *'
   workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+
     steps:
-      - name: Checkout codes
-        uses: actions/checkout@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          token: ${{ secrets.PAT }} #此处PAT需要申请，教程详见：README
-      - name: Update system and install zsh
+          python-version: '3.10'
+
+      - name: Install dependencies
         run: |
-          sudo -E apt-get -qq update
-          sudo -E apt-get install zsh -y
-          
-      - name: 初始化Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.10"
-          
-      - name: 开始
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run script
         env:
-            CONFIG: ${{ secrets.CONFIG }}
-            AES_KEY: ${{ secrets.AES_KEY }}
+          CONFIG: ${{ secrets.CONFIG }}
         run: |
-          pip3 install -r requirements.txt
           python3 main.py
 
-      - name: persist tokens
+      - name: Persist tokens
         run: |
-          git config user.name github-actions
-          git config user.email github-actions@users.noreply.github.com
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
           git add .
-          git commit -m "persist tokens trigger by ${{ github.event_name }}"
-          git push origin master
+          git commit -m "persist tokens trigger by ${{ github.event_name }}" || exit 0
+          git push
